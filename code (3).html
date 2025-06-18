@@ -1,0 +1,2193 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Messenger Advanced Multi-User Chat</title>
+  <link href="https://fonts.googleapis.com/css?family=Inter:400,600&amp;display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+  <style>
+    /* Reset & base */
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    html {
+      font-size: 16px;
+      font-family: 'Inter', sans-serif;
+      background: #f0f2f5;
+      color: #222;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      scroll-behavior: smooth;
+    }
+    body, #app {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    :root {
+      --header-height: 64px;
+      --sidebar-width: 280px;
+      --footer-height: 48px;
+      --glass-bg: rgba(255 255 255 / 0.25);
+      --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+      --glass-border: 1px solid rgba(255 255 255 / 0.18);
+      --primary-color: #1877f2;
+      --secondary-color: #e4e6eb;
+      --text-color: #050505;
+      --text-secondary: #65676b;
+      --bg-light: #f0f2f5;
+      --scrollbar-track: #d9d9d9;
+      --scrollbar-thumb: #b0b0b0;
+      --modal-bg: rgba(0,0,0,0.48);
+      --modal-content-bg: #fff;
+    }
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--scrollbar-track);
+      border-radius: 8px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--scrollbar-thumb);
+      border-radius: 8px;
+    }
+    .hidden {
+      display: none !important;
+    }
+    button {
+      cursor: pointer;
+    }
+    button:focus-visible,
+    input:focus-visible,
+    textarea:focus-visible {
+      outline: 3px solid var(--primary-color);
+      outline-offset: 2px;
+    }
+
+    /* Login screen */
+    #login-screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background:
+        linear-gradient(135deg, #6c63ff 0%, #00bfa6 90%);
+      padding: 1rem;
+    }
+    #login-screen form {
+      background: var(--glass-bg);
+      backdrop-filter: blur(15px);
+      border-radius: 16px;
+      padding: 2.5rem 2rem;
+      min-width: 320px;
+      max-width: 400px;
+      box-shadow: var(--glass-shadow);
+      border: var(--glass-border);
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      width: 100%;
+    }
+    #login-screen h1 {
+      font-weight: 700;
+      font-size: clamp(1.75rem, 5vw, 2.25rem);
+      color: white;
+      text-align: center;
+      margin-bottom: 0.5rem;
+      user-select: none;
+    }
+    #login-screen label {
+      color: white;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    #login-screen input[type="text"],
+    #login-screen input[type="password"] {
+      padding: 0.75rem 1rem;
+      border-radius: 12px;
+      border: none;
+      font-size: 1rem;
+      outline-offset: 2px;
+    }
+    #login-screen button {
+      background: white;
+      color: var(--primary-color);
+      font-weight: 700;
+      padding: 0.85rem 1rem;
+      border-radius: 12px;
+      border: none;
+      font-size: 1rem;
+      transition: background-color 0.3s ease;
+    }
+    #login-screen button:hover,
+    #login-screen button:focus-visible {
+      background-color: #dde5ff;
+    }
+    #login-error {
+      color: #ff6b6b;
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-align: center;
+      margin-top: -1rem;
+    }
+    #password-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    #toggle-password {
+      position: absolute;
+      right: 14px;
+      background: transparent;
+      border: none;
+      color: white;
+      cursor: pointer;
+      font-size: 20px;
+      padding: 0;
+    }
+
+    /* App layout */
+    #app-container {
+      display: flex;
+      flex: 1 1 auto;
+      height: 100vh;
+      overflow: hidden;
+      background: var(--bg-light);
+      position: relative;
+    }
+    header.app-header {
+      position: sticky;
+      top: 0;
+      height: var(--header-height);
+      flex-shrink: 0;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      box-shadow: var(--glass-shadow);
+      border-bottom: var(--glass-border);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      gap: 1rem;
+      z-index: 200;
+    }
+    header .logo {
+      font-weight: 800;
+      font-size: clamp(1.25rem, 1.5vw, 1.75rem);
+      color: var(--primary-color);
+      user-select: none;
+    }
+    header .user-info {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 600;
+      color: var(--text-color);
+    }
+    header .user-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background-color: var(--primary-color);
+      color: white;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+    header button#logout-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 24px;
+      transition: color 0.3s ease;
+    }
+    header button#logout-btn:hover,
+    header button#logout-btn:focus-visible {
+      color: var(--primary-color);
+    }
+
+    /* Sidebar */
+    nav.sidebar {
+      width: var(--sidebar-width);
+      padding: 1rem 0;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      box-shadow: var(--glass-shadow);
+      border-right: var(--glass-border);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      flex-shrink: 0;
+      overflow-y: auto;
+      z-index: 100;
+    }
+    nav.sidebar header {
+      padding: 0 1.25rem;
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: var(--primary-color);
+      user-select: none;
+    }
+    nav.sidebar ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      flex: 1;
+      overflow-y: auto;
+    }
+    nav.sidebar ul li {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.6rem 1.25rem;
+      cursor: pointer;
+      border-radius: 12px;
+      transition: background-color 0.3s ease;
+      color: var(--text-secondary);
+      user-select: none;
+    }
+    nav.sidebar ul li.active,
+    nav.sidebar ul li:hover,
+    nav.sidebar ul li:focus-visible {
+      background-color: rgba(24, 119, 242, 0.12);
+      color: var(--primary-color);
+      outline: none;
+    }
+    nav.sidebar ul li .material-icons {
+      font-size: 24px;
+    }
+    nav.sidebar ul li .badge {
+      margin-left: auto;
+      background: var(--primary-color);
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 12px;
+      min-width: 20px;
+      text-align: center;
+    }
+
+    /* Main chat area */
+    main.chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: white;
+      box-shadow: inset 0 0 20px rgb(0 0 0 / 0.03);
+      overflow: hidden;
+      min-width: 0;
+      position: relative;
+      z-index: 1;
+    }
+    .chat-header {
+      height: 72px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      border-bottom: var(--glass-border);
+      display: flex;
+      align-items: center;
+      padding: 0 1.5rem;
+      font-weight: 700;
+      color: var(--primary-color);
+      user-select: none;
+    }
+    .chat-messages {
+      flex: 1;
+      padding: 20px 24px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      scroll-behavior: smooth;
+    }
+    .chat-messages::-webkit-scrollbar {
+      width: 8px;
+    }
+    .chat-messages::-webkit-scrollbar-thumb {
+      background: var(--scrollbar-thumb);
+      border-radius: 20px;
+    }
+    .message {
+      max-width: 65%;
+      padding: 12px 16px;
+      border-radius: 20px;
+      font-size: clamp(0.9rem, 1vw, 1rem);
+      line-height: 1.4;
+      box-shadow: 0 2px 8px rgb(0 0 0 / 0.05);
+      position: relative;
+      word-wrap: break-word;
+      background: var(--secondary-color);
+      white-space: pre-line;
+      user-select: text;
+    }
+    .message.sent {
+      align-self: flex-end;
+      background: var(--primary-color);
+      color: white;
+      border-bottom-right-radius: 6px;
+    }
+    .message.received {
+      align-self: flex-start;
+      background: var(--secondary-color);
+      color: var(--text-color);
+      border-bottom-left-radius: 6px;
+    }
+    .message .meta {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .message.sent .meta {
+      color: #cce0ff;
+    }
+    .message .meta .avatar {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background-color: var(--primary-color);
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      user-select: none;
+    }
+    /* Delete button */
+    .message .delete-btn {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 18px;
+      opacity: 0.6;
+      cursor: pointer;
+      border-radius: 12px;
+      transition: opacity 0.2s ease;
+      padding: 2px;
+    }
+    .message .delete-btn:hover,
+    .message .delete-btn:focus-visible {
+      opacity: 1;
+      outline: none;
+      color: var(--primary-color);
+    }
+
+    /* Media content inside message */
+    .message img,
+    .message video,
+    .message audio {
+      max-width: 100%;
+      border-radius: 12px;
+      margin-top: 8px;
+      box-shadow: 0 2px 6px rgb(0 0 0 / 0.1);
+      display: block;
+    }
+    video {
+      max-height: 180px;
+    }
+    audio {
+      width: 100%;
+      margin-top: 4px;
+    }
+
+    /* File message link */
+    .message .file-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--primary-color);
+      text-decoration: none;
+      font-weight: 600;
+      user-select: text;
+      margin-top: 8px;
+      border: 1px solid var(--primary-color);
+      padding: 6px 12px;
+      border-radius: 12px;
+      transition: background-color 0.3s ease, color 0.3s ease;
+      max-width: 100%;
+      overflow-wrap: break-word;
+      word-break: break-word;
+    }
+    .message .file-link:hover,
+    .message .file-link:focus-visible {
+      background-color: var(--primary-color);
+      color: white;
+      outline: none;
+    }
+    .material-icons.download-icon {
+      font-size: 18px;
+    }
+
+    /* Chat input */
+    .chat-input-area {
+      display: flex;
+      padding: 12px 20px;
+      gap: 12px;
+      background: var(--glass-bg);
+      border-top: var(--glass-border);
+      backdrop-filter: blur(20px);
+      flex-wrap: wrap;
+      z-index: 10;
+    }
+    .chat-input-area textarea {
+      resize: none;
+      border-radius: 16px;
+      border: none;
+      padding: 12px 16px;
+      font-size: 1rem;
+      font-family: inherit;
+      flex: 1 1 200px;
+      min-height: 48px;
+      max-height: 96px;
+      outline-offset: 2px;
+      box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.1);
+      min-width: 0;
+    }
+    .chat-input-area textarea:focus {
+      box-shadow: 0 0 5px var(--primary-color);
+    }
+    .chat-input-area button {
+      border: none;
+      background: var(--primary-color);
+      color: white;
+      border-radius: 50%;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      transition: background-color 0.3s ease;
+      flex-shrink: 0;
+    }
+    .chat-input-area button:disabled {
+      background: #8ab3ff;
+      cursor: not-allowed;
+    }
+    .chat-input-area button:hover:not(:disabled),
+    .chat-input-area button:focus-visible:not(:disabled) {
+      background: #0f60e9;
+    }
+
+    /* Media buttons */
+    .media-buttons {
+      display: flex;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .media-buttons label {
+      cursor: pointer;
+      background: var(--secondary-color);
+      border-radius: 50%;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary-color);
+      box-shadow: 0 1px 4px rgb(0 0 0 / 0.1);
+      transition: background-color 0.3s ease;
+    }
+    .media-buttons label:hover,
+    .media-buttons label:focus-visible {
+      background: rgba(24, 119, 242, 0.12);
+      outline: none;
+    }
+    .media-buttons input[type="file"] {
+      display: none;
+    }
+    /* Profile Modal Styles */
+    #profile-modal-overlay {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: var(--modal-bg);
+      justify-content: center;
+      align-items: center;
+    }
+    #profile-modal-overlay.active {
+      display: flex;
+    }
+    #profile-modal {
+      background: var(--modal-content-bg);
+      border-radius: 16px;
+      max-width: 400px;
+      width: 90%;
+      padding: 2rem 1.5rem 1.5rem;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.4);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    #profile-modal h2 {
+      margin-top: 0;
+      font-weight: 700;
+      color: var(--primary-color);
+      user-select: none;
+    }
+    #profile-modal label {
+      font-weight: 600;
+      color: var(--text-color);
+      display: block;
+      margin-bottom: 0.3rem;
+      user-select: none;
+    }
+    #profile-modal input[type="text"],
+    #profile-modal input[type="password"],
+    #profile-modal input[type="file"] {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border-radius: 10px;
+      border: 1px solid var(--scrollbar-thumb);
+      font-size: 1rem;
+      font-family: inherit;
+      outline-offset: 2px;
+    }
+    #profile-avatar-preview {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background-color: var(--primary-color);
+      color: white;
+      font-weight: 700;
+      font-size: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 0.75rem;
+      user-select: none;
+      object-fit: cover;
+      border: 2px solid var(--primary-color);
+    }
+    #profile-modal button.close-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 28px;
+      cursor: pointer;
+      transition: color 0.3s ease;
+      user-select: none;
+    }
+    #profile-modal button.close-btn:hover,
+    #profile-modal button.close-btn:focus-visible {
+      color: var(--primary-color);
+      outline: none;
+    }
+    #profile-modal .btn-save {
+      background: var(--primary-color);
+      border: none;
+      color: white;
+      border-radius: 12px;
+      padding: 0.8rem;
+      font-weight: 700;
+      margin-top: 1rem;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    #profile-modal .btn-save:disabled {
+      background: #8ab3ff;
+      cursor: not-allowed;
+    }
+    #profile-modal .btn-save:hover:not(:disabled),
+    #profile-modal .btn-save:focus-visible:not(:disabled) {
+      background: #0f60e9;
+      outline: none;
+    }
+    #profile-error {
+      color: #ff6b6b;
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-top: 0;
+      user-select: none;
+    }
+
+    /* Friends & Private Chat Sidebar */
+    #friends-container {
+      width: 280px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      box-shadow: var(--glass-shadow);
+      border-right: var(--glass-border);
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      overflow-y: auto;
+      max-height: calc(100vh - var(--header-height));
+      padding-bottom: 1rem;
+      z-index: 100;
+    }
+    #friends-header {
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: var(--primary-color);
+      padding: 1rem 1.5rem 0.5rem 1.5rem;
+      user-select: none;
+      flex-shrink: 0;
+    }
+    #friends-list {
+      list-style: none;
+      margin: 0;
+      padding: 0 0 0 0;
+      overflow-y: auto;
+      flex-grow: 1;
+    }
+    #friends-list li {
+      padding: 0.6rem 1.5rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      border-radius: 12px;
+      transition: background-color 0.3s ease;
+      color: var(--text-secondary);
+      user-select: none;
+    }
+    #friends-list li.active,
+    #friends-list li:hover,
+    #friends-list li:focus-visible {
+      background-color: rgba(24, 119, 242, 0.12);
+      color: var(--primary-color);
+      outline: none;
+    }
+    #friends-list li .avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background-color: var(--primary-color);
+      color: white;
+      font-weight: 700;
+      font-size: 0.85rem;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      user-select: none;
+    }
+    #add-friend-container {
+      padding: 0.5rem 1.5rem;
+      border-top: var(--glass-border);
+      user-select: none;
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    #add-friend-input {
+      flex-grow: 1;
+      padding: 0.5rem 0.75rem;
+      font-size: 1rem;
+      border: 1px solid var(--scrollbar-thumb);
+      border-radius: 12px;
+      outline-offset: 2px;
+      font-family: inherit;
+    }
+    #add-friend-btn {
+      padding: 0.5rem 0.75rem;
+      background-color: var(--primary-color);
+      border: none;
+      color: white;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      user-select: none;
+    }
+    #add-friend-btn:disabled {
+      background-color: #8ab3ff;
+      cursor: not-allowed;
+    }
+
+    /* Profile edit button */
+    #profile-open-btn {
+      position: fixed;
+      top: calc(var(--header-height) + 16px);
+      left: 16px;
+      background: var(--primary-color);
+      border: none;
+      border-radius: 50%;
+      width: 44px;
+      height: 44px;
+      color: white;
+      font-size: 24px;
+      box-shadow: var(--glass-shadow);
+      cursor: pointer;
+      z-index: 1100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      transition: background-color 0.3s ease;
+    }
+    #profile-open-btn:hover,
+    #profile-open-btn:focus-visible {
+      background: #0f60e9;
+      outline: none;
+    }
+
+
+    /* Responsive */
+
+    @media (max-width: 767px) {
+      nav.sidebar, #friends-container {
+        position: fixed;
+        z-index: 120;
+        top: var(--header-height);
+        left: 0;
+        height: calc(100vh - var(--header-height));
+        background: var(--glass-bg);
+        box-shadow: var(--glass-shadow);
+        border-right: var(--glass-border);
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        width: 280px;
+      }
+      nav.sidebar.open, #friends-container.open {
+        transform: translateX(0);
+      }
+      main.chat-area {
+        margin-left: 0;
+      }
+      header.app-header {
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+      #menu-toggle, #friends-toggle-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        border: none;
+        color: var(--primary-color);
+        font-size: 28px;
+        cursor: pointer;
+        margin-right: 0.5rem;
+        user-select: none;
+      }
+      #friends-toggle-btn {
+        margin-left: 0.5rem;
+      }
+    }
+    @media (min-width: 768px) {
+      #menu-toggle, #friends-toggle-btn {
+        display: none;
+      }
+      nav.sidebar, #friends-container {
+        transform: translateX(0) !important;
+        position: relative;
+        height: 100vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Login screen -->
+  <section id="login-screen" aria-label="Login Screen">
+    <form id="login-form" aria-describedby="login-error" novalidate>
+      <h1>Welcome to Chat</h1>
+      <label for="username-input">Choose a unique username</label>
+      <input type="text" id="username-input" name="username" autocomplete="username" required aria-required="true" placeholder="Username (2-32 chars)" minlength="2" maxlength="32" />
+      <label for="password-input">Enter password</label>
+      <div id="password-container">
+        <input type="password" id="password-input" name="password" autocomplete="current-password" required aria-required="true" placeholder="Password (min 4 chars)" minlength="4" />
+        <button type="button" id="toggle-password" title="Show/Hide password" aria-label="Toggle password visibility">visibility</button>
+      </div>
+      <div id="login-error" role="alert" aria-live="assertive" class="hidden"></div>
+      <button type="submit" aria-label="Register or login">Enter Chat</button>
+      <p style="color:white; font-size:0.9rem; margin-top:-0.6rem;user-select:none;">New usernames register automatically. Existing usernames must enter the correct password.</p>
+    </form>
+  </section>
+
+  <!-- Main app container -->
+  <div id="app" class="hidden" role="main" aria-label="Chat Application">
+    <header class="app-header" role="banner">
+      <button id="menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="sidebar-nav">
+        <span class="material-icons">menu</span>
+      </button>
+      <div class="logo" aria-live="polite" aria-atomic="true">ChatApp</div>
+      <div class="user-info" aria-label="Logged in user">
+        <div class="user-avatar" aria-hidden="true"></div>
+        <span id="display-username" tabindex="0"></span>
+        <button id="logout-btn" title="Logout" aria-label="Logout from chat interface">
+          <span class="material-icons">logout</span>
+        </button>
+        <button id="profile-open-btn" title="Edit Profile" aria-label="Open profile editor">
+          <span class="material-icons">edit</span>
+        </button>
+      </div>
+    </header>
+
+    <div style="display:flex; flex:1; min-height:0; overflow:hidden;">
+      <nav id="sidebar-nav" class="sidebar" role="navigation" aria-label="Chat navigation">
+        <header>Chats</header>
+        <ul id="chat-list" tabindex="0" aria-live="polite" aria-relevant="additions">
+          <li data-chat-id="group" class="active" tabindex="0" aria-current="page">
+            <span class="material-icons">group</span> Group Chat <span class="badge" aria-label="Unread messages">0</span>
+          </li>
+        </ul>
+      </nav>
+
+      <nav id="friends-container" class="sidebar" role="navigation" aria-label="Friends and private chats">
+        <header id="friends-header">Friends & Private Chats</header>
+        <ul id="friends-list" tabindex="0">
+          <!-- List of friends and private chats -->
+        </ul>
+        <div id="add-friend-container" role="form" aria-label="Add friend by username">
+          <input type="text" id="add-friend-input" placeholder="Add friend by username" aria-label="Add friend username" />
+          <button id="add-friend-btn" disabled>Add</button>
+        </div>
+      </nav>
+
+      <main class="chat-area" role="main">
+        <div class="chat-header" aria-live="polite" id="chat-header-title" tabindex="0" aria-atomic="true">
+          Group Chat
+        </div>
+        <section class="chat-messages" id="chat-messages" tabindex="0" role="log" aria-live="polite" aria-relevant="additions">
+          <!-- Messages -->
+        </section>
+        <form class="chat-input-area" id="chat-input-form" aria-label="Send message form">
+          <div class="media-buttons" role="group" aria-label="Media attachment buttons">
+            <label for="image-upload" title="Attach image" aria-label="Attach image">
+              <span class="material-icons">image</span>
+              <input type="file" id="image-upload" accept="image/*" multiple />
+            </label>
+            <label for="audio-upload" title="Attach audio" aria-label="Attach audio">
+              <span class="material-icons">audiotrack</span>
+              <input type="file" id="audio-upload" accept="audio/*" multiple />
+            </label>
+            <label for="video-upload" title="Attach video" aria-label="Attach video">
+              <span class="material-icons">videocam</span>
+              <input type="file" id="video-upload" accept="video/*" multiple />
+            </label>
+            <label for="file-upload" title="Attach file" aria-label="Attach file">
+              <span class="material-icons">attach_file</span>
+              <input type="file" id="file-upload" multiple />
+            </label>
+          </div>
+          <textarea id="message-input" placeholder="Type a message" aria-label="Type your message" rows="1" autocomplete="off"></textarea>
+          <button type="submit" id="send-btn" aria-label="Send message" disabled>
+            <span class="material-icons">send</span>
+          </button>
+        </form>
+      </main>
+    </div>
+
+    <footer class="app-footer" role="contentinfo" aria-live="polite" aria-atomic="true">
+      &copy; 2024 ChatApp • All rights reserved
+    </footer>
+  </div>
+
+  <!-- Profile edit modal -->
+  <div id="profile-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="profile-modal-title">
+    <div id="profile-modal">
+      <button class="close-btn" aria-label="Close profile editor" title="Close">&times;</button>
+      <h2 id="profile-modal-title">Edit Profile</h2>
+      <div>
+        <label for="profile-avatar-upload">Change avatar</label>
+        <img id="profile-avatar-preview" alt="Avatar preview" aria-hidden="true" / src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/d24ca759-f380-4a81-a769-9a7f2e6fc3da.png">
+        <input type="file" id="profile-avatar-upload" accept="image/*" aria-describedby="avatar-help" />
+        <small id="avatar-help" style="display:block; margin-top:0.25rem; color:#666; font-size:0.85rem;">Upload PNG, JPG max 2 MB</small>
+      </div>
+      <div>
+        <label for="profile-name-input">Change username</label>
+        <input type="text" id="profile-name-input" minlength="2" maxlength="32" />
+      </div>
+      <div>
+        <label for="profile-password-old">Current password</label>
+        <input type="password" id="profile-password-old" placeholder="Leave blank if not changing password" minlength="4" />
+      </div>
+      <div>
+        <label for="profile-password-new">New password</label>
+        <input type="password" id="profile-password-new" placeholder="New password (min 4 chars)" minlength="4" />
+      </div>
+      <p id="profile-error" role="alert" aria-live="assertive" class="hidden"></p>
+      <button class="btn-save" id="profile-save-btn" disabled>Save Changes</button>
+    </div>
+  </div>
+
+<script>
+  (() => {
+    'use strict';
+
+    // Elements:
+    const loginScreen = document.getElementById('login-screen');
+    const appContainer = document.getElementById('app');
+    const loginForm = document.getElementById('login-form');
+    const usernameInput = document.getElementById('username-input');
+    const passwordInput = document.getElementById('password-input');
+    const loginError = document.getElementById('login-error');
+    const displayUsername = document.getElementById('display-username');
+    const userAvatar = document.querySelector('.user-avatar');
+    const logoutBtn = document.getElementById('logout-btn');
+    const chatMessages = document.getElementById('chat-messages');
+    const chatInputForm = document.getElementById('chat-input-form');
+    const messageInput = document.getElementById('message-input');
+    const sendBtn = document.getElementById('send-btn');
+    const chatList = document.getElementById('chat-list');
+    const sidebarNav = document.getElementById('sidebar-nav');
+    const menuToggle = document.getElementById('menu-toggle');
+    const imageUpload = document.getElementById('image-upload');
+    const audioUpload = document.getElementById('audio-upload');
+    const videoUpload = document.getElementById('video-upload');
+    const fileUpload = document.getElementById('file-upload');
+    const togglePasswordBtn = document.getElementById('toggle-password');
+    
+    const friendsContainer = document.getElementById('friends-container');
+    const friendsList = document.getElementById('friends-list');
+    const addFriendInput = document.getElementById('add-friend-input');
+    const addFriendBtn = document.getElementById('add-friend-btn');
+
+    // Profile modal elements
+    const profileModalOverlay = document.getElementById('profile-modal-overlay');
+    const profileModal = document.getElementById('profile-modal');
+    const profileCloseBtn = profileModal.querySelector('.close-btn');
+    const profileAvatarUpload = document.getElementById('profile-avatar-upload');
+    const profileAvatarPreview = document.getElementById('profile-avatar-preview');
+    const profileNameInput = document.getElementById('profile-name-input');
+    const profilePasswordOld = document.getElementById('profile-password-old');
+    const profilePasswordNew = document.getElementById('profile-password-new');
+    const profileError = document.getElementById('profile-error');
+    const profileSaveBtn = document.getElementById('profile-save-btn');
+
+    // Data keys in localStorage
+    const LS_USERS_KEY = 'chatAppUsers';
+    const LS_MESSAGES_KEY = 'chatAppMessages';
+    const LS_CURRENT_USER_KEY = 'chatAppCurrentUser';
+    const LS_FRIENDS_KEY = 'chatAppFriends';
+
+    // State
+    let users = []; // array {username, password, created, lastLogin, avatar? (dataURL)}
+    let currentUser = null; // {username, password, created, lastLogin, avatar?}
+    let messages = []; // array of {id, user, toUser, type, content, timestamp, filename?}
+    let friends = {}; // object { username: [friendUsername,...], ... }
+    let currentChat = { id: 'group', name: 'Group Chat', isGroup: true }; // id: "group" or friend's username
+
+    // UTILITIES
+
+    function simpleHash(str) {
+      let hash = 0;
+      for (let i=0;i<str.length;i++) {
+        hash = (hash << 5) - hash + str.charCodeAt(i);
+        hash |= 0;
+      }
+      return hash.toString();
+    }
+
+    function loadUsers() {
+      try {users = JSON.parse(localStorage.getItem(LS_USERS_KEY)) || [];} catch {users = [];}
+    }
+    function saveUsers() {
+      localStorage.setItem(LS_USERS_KEY, JSON.stringify(users));
+    }
+    function loadMessages() {
+      try {messages = JSON.parse(localStorage.getItem(LS_MESSAGES_KEY)) || [];} catch {messages = [];}
+    }
+    function saveMessages() {
+      localStorage.setItem(LS_MESSAGES_KEY, JSON.stringify(messages));
+    }
+    function loadCurrentUser() {
+      try {currentUser = JSON.parse(localStorage.getItem(LS_CURRENT_USER_KEY));} catch {currentUser = null;}
+    }
+    function saveCurrentUser() {
+      if(currentUser) localStorage.setItem(LS_CURRENT_USER_KEY, JSON.stringify(currentUser));
+      else localStorage.removeItem(LS_CURRENT_USER_KEY);
+    }
+    function removeCurrentUser() {
+      currentUser = null;
+      localStorage.removeItem(LS_CURRENT_USER_KEY);
+    }
+    function loadFriends() {
+      try {friends = JSON.parse(localStorage.getItem(LS_FRIENDS_KEY)) || {};} catch {friends = {};}
+    }
+    function saveFriends() {
+      localStorage.setItem(LS_FRIENDS_KEY, JSON.stringify(friends));
+    }
+
+    // Avatar generation or URL fallback
+    function generateAvatarInitials(name) {
+      return name.trim().split(/\s+/).map(s => s[0]).slice(0,2).join('').toUpperCase();
+    }
+
+    // Create avatar element, prefer custom avatar else initials
+    function createAvatarElement(username, avatarDataURL, size=28, title='') {
+      const container = document.createElement('span');
+      container.className = 'avatar';
+      container.title = title || username;
+      container.style.width = size + 'px';
+      container.style.height = size + 'px';
+      container.style.fontSize = (size*0.75) + 'px';
+      container.style.lineHeight = size + 'px';
+      container.style.borderRadius = '50%';
+      container.style.color = 'white';
+      container.style.fontWeight = '700';
+      container.style.textAlign = 'center';
+      container.style.display = 'inline-flex';
+      container.style.justifyContent = 'center';
+      container.style.alignItems = 'center';
+      container.style.userSelect = 'none';
+      container.style.backgroundColor = '#1877f2';
+
+      if(avatarDataURL) {
+        const img = document.createElement('img');
+        img.src = avatarDataURL;
+        img.alt = `Avatar of ${username}`;
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.borderRadius = '50%';
+        img.style.objectFit = 'cover';
+        container.appendChild(img);
+      } else {
+        container.textContent = generateAvatarInitials(username);
+      }
+      return container;
+    }
+
+    // Render chat messages filtered by current chat
+    function renderMessages() {
+      chatMessages.innerHTML = '';
+      // Display messages for group or private chat (toUser set)
+      const filtered = messages.filter(m => {
+        if(currentChat.isGroup) return !m.toUser;
+        // Private chat between currentUser and friend
+        return (m.user === currentUser.username && m.toUser === currentChat.id) || (m.user === currentChat.id && m.toUser === currentUser.username);
+      });
+      filtered.forEach(m => {
+        const el = createMessageElement(m);
+        chatMessages.appendChild(el);
+      });
+    }
+
+    // Create single message element with delete button if own message
+    function createMessageElement(msg) {
+      const isSender = (msg.user === currentUser.username);
+      const el = document.createElement('article');
+      el.className = `message ${isSender ? 'sent' : 'received'}`;
+      el.setAttribute('tabindex', '0');
+      el.setAttribute('role', 'article');
+      el.setAttribute('aria-label', `${isSender ? 'Sent' : 'Received'} ${msg.type} message from ${msg.user}`);
+
+      // Meta with avatar, username, time, and private chat indication
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+
+      const userObj = users.find(u => u.username === msg.user);
+      const avatarEl = createAvatarElement(msg.user, userObj?.avatar, 20, msg.user);
+      avatarEl.classList.add('avatar');
+      meta.appendChild(avatarEl);
+
+      const usernameSpan = document.createElement('span');
+      usernameSpan.textContent = msg.user;
+      meta.appendChild(usernameSpan);
+
+      if(msg.toUser) {
+        const privateSpan = document.createElement('span');
+        privateSpan.style.fontWeight = '700';
+        privateSpan.style.color = '#0f60e9';
+        privateSpan.style.marginLeft = '8px';
+        privateSpan.style.fontSize = '0.75rem';
+        privateSpan.textContent = '(private)';
+        meta.appendChild(privateSpan);
+      }
+
+      const timeSpan = document.createElement('span');
+      timeSpan.textContent = '• ' + new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+      meta.appendChild(timeSpan);
+
+      el.appendChild(meta);
+
+      // Content rendering by type
+      if(msg.type === 'text') {
+        const p = document.createElement('p');
+        p.textContent = msg.content;
+        el.appendChild(p);
+      } else if (msg.type === 'image') {
+        const img = document.createElement('img');
+        img.src = msg.content;
+        img.alt = `Image sent by ${msg.user}`;
+        img.loading = 'lazy';
+        el.appendChild(img);
+      } else if (msg.type === 'audio') {
+        const audio = document.createElement('audio');
+        audio.controls = true;
+        audio.src = msg.content;
+        audio.setAttribute('aria-label', `Audio message sent by ${msg.user}`);
+        el.appendChild(audio);
+      } else if (msg.type === 'video') {
+        const video = document.createElement('video');
+        video.controls = true;
+        video.src = msg.content;
+        video.setAttribute('aria-label', `Video message sent by ${msg.user}`);
+        el.appendChild(video);
+      } else if (msg.type === 'file') {
+        const link = document.createElement('a');
+        link.href = msg.content;
+        link.setAttribute('download', msg.filename || 'file');
+        link.className = 'file-link';
+        link.textContent = msg.filename || 'File';
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+
+        const icon = document.createElement('span');
+        icon.className = 'material-icons download-icon';
+        icon.textContent = 'download';
+        link.prepend(icon);
+        el.appendChild(link);
+      }
+
+      // Own message can be deleted
+      if(isSender) {
+        const delBtn = document.createElement('button');
+        delBtn.className = 'delete-btn';
+        delBtn.setAttribute('aria-label', 'Delete message');
+        delBtn.title = 'Delete message';
+        delBtn.innerHTML = '<span class="material-icons">delete</span>';
+        delBtn.addEventListener('click', () => {
+          if(confirm('Delete this message? This action cannot be undone.')) {
+            deleteMessageById(msg.id);
+          }
+        });
+        el.appendChild(delBtn);
+      }
+
+      return el;
+    }
+
+    // Delete message by ID (only own messages)
+    function deleteMessageById(id) {
+      const idx = messages.findIndex(m => m.id === id && m.user === currentUser.username);
+      if(idx !== -1) {
+        messages.splice(idx, 1);
+        saveMessages();
+        renderMessages();
+      }
+    }
+
+    // Scroll chat to bottom
+    function scrollToBottom() {
+      setTimeout(() => {
+        chatMessages.scrollTo({
+          top: chatMessages.scrollHeight,
+          behavior: 'smooth'
+        });
+      }, 100);
+    }
+
+    // Send button enable/disable
+    function updateSendButton() {
+      const hasText = messageInput.value.trim() !== '';
+      const hasFiles = imageUpload.files.length > 0 || audioUpload.files.length > 0 || videoUpload.files.length > 0 || fileUpload.files.length > 0;
+      sendBtn.disabled = !(hasText || hasFiles);
+    }
+
+    // Initialize app data
+    function initApp() {
+      loadUsers();
+      loadMessages();
+      loadCurrentUser();
+      loadFriends();
+      if(currentUser) {
+        // Establish friends data for current user
+        if(!friends[currentUser.username]) friends[currentUser.username] = [];
+        saveFriends();
+        showApp();
+      } else {
+        showLogin();
+      }
+    }
+
+    // Display login screen
+    function showLogin() {
+      loginScreen.classList.remove('hidden');
+      appContainer.classList.add('hidden');
+      loginError.classList.add('hidden');
+      usernameInput.value = '';
+      passwordInput.value = '';
+      usernameInput.focus();
+    }
+
+    // Show main app UI
+    function showApp() {
+      loginScreen.classList.add('hidden');
+      appContainer.classList.remove('hidden');
+      displayUsername.textContent = currentUser.username;
+      if(currentUser.avatar) {
+        // Show profile avatar
+        userAvatar.style.backgroundImage = `url(${currentUser.avatar})`;
+        userAvatar.textContent = '';
+      } else {
+        userAvatar.style.backgroundImage = '';
+        userAvatar.textContent = generateAvatarInitials(currentUser.username);
+      }
+      let user = users.find(u => u.username === currentUser.username);
+      if(user) {
+        user.lastLogin = Date.now();
+        saveUsers();
+      }
+      changeChat('group', true);
+      renderFriendsList();
+      renderMessages();
+      scrollToBottom();
+    }
+
+    // Save new messages then broadcast
+    function saveNewMessages(newMsgs) {
+      messages.push(...newMsgs);
+      saveMessages();
+      const e = new StorageEvent('storage', { key: LS_MESSAGES_KEY, newValue: JSON.stringify(messages) });
+      window.dispatchEvent(e);
+    }
+
+    // Convert file to dataURL (2MB limit)
+    function fileToDataURL(file) {
+      const MAX_SIZE = 2 * 1024 * 1024;
+      return new Promise((resolve,reject) => {
+        if(file.size > MAX_SIZE) {
+          reject(new Error(`File "${file.name}" exceeds 2MB limit.`));
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('File read error'));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function clearFileInputs() {
+      imageUpload.value = '';
+      audioUpload.value = '';
+      videoUpload.value = '';
+      fileUpload.value = '';
+    }
+
+    // Toggle password visibility
+    togglePasswordBtn.addEventListener('click', () => {
+      if(passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        togglePasswordBtn.textContent = 'visibility_off';
+      } else {
+        passwordInput.type = 'password';
+        togglePasswordBtn.textContent = 'visibility';
+      }
+      passwordInput.focus();
+    });
+
+    // Login & registration
+    loginForm.addEventListener('submit', e => {
+      e.preventDefault();
+      let uname = usernameInput.value.trim();
+      let pass = passwordInput.value;
+      loginError.classList.add('hidden');
+      if(uname.length < 2 || uname.length > 32) {
+        loginError.textContent = 'Username must be 2-32 characters long.';
+        loginError.classList.remove('hidden');
+        usernameInput.focus();
+        return;
+      }
+      if(pass.length < 4) {
+        loginError.textContent = 'Password must be at least 4 characters long.';
+        loginError.classList.remove('hidden');
+        passwordInput.focus();
+        return;
+      }
+      let existUser = users.find(u => u.username.toLowerCase() === uname.toLowerCase());
+      if(existUser) {
+        if(existUser.password !== simpleHash(pass)) {
+          loginError.textContent = 'Incorrect password for this username.';
+          loginError.classList.remove('hidden');
+          passwordInput.focus();
+          return;
+        }
+        currentUser = existUser;
+        saveCurrentUser();
+        showApp();
+      } else {
+        const newUser = {
+          username: uname,
+          password: simpleHash(pass),
+          created: Date.now(),
+          lastLogin: Date.now(),
+          avatar: null
+        };
+        users.push(newUser);
+        saveUsers();
+        currentUser = newUser;
+        saveCurrentUser();
+        if(!friends[currentUser.username]) friends[currentUser.username] = [];
+        saveFriends();
+        showApp();
+      }
+    });
+
+    // Logout
+    logoutBtn.addEventListener('click', () => {
+      removeCurrentUser();
+      showLogin();
+    });
+
+    // Sidebar menu toggle on mobile
+    menuToggle.addEventListener('click', () => {
+      const expanded = menuToggle.getAttribute('aria-expanded') === 'true';
+      menuToggle.setAttribute('aria-expanded', (!expanded).toString());
+      sidebarNav.classList.toggle('open');
+      friendsContainer.classList.remove('open');
+    });
+
+    // Close sidebars on click outside mobile
+    document.addEventListener('click', e => {
+      if (!sidebarNav.contains(e.target) && !menuToggle.contains(e.target) && sidebarNav.classList.contains('open')) {
+        sidebarNav.classList.remove('open');
+        menuToggle.setAttribute('aria-expanded', 'false');
+      }
+      if (!friendsContainer.contains(e.target) && !friendsToggleBtn?.contains(e.target) && friendsContainer.classList.contains('open')) {
+        friendsContainer.classList.remove('open');
+      }
+    });
+
+    // Resize textarea & update send button on input
+    messageInput.addEventListener('input', () => {
+      messageInput.style.height = 'auto';
+      messageInput.style.height = messageInput.scrollHeight + 'px';
+      updateSendButton();
+    });
+
+    // Update send button on file inputs change
+    [imageUpload, audioUpload, videoUpload, fileUpload].forEach(inp => { inp.addEventListener('change', updateSendButton); });
+    updateSendButton();
+
+    // Add files to new messages array and handle size limit
+    async function addFiles(inputEl, type, newMessages) {
+      for(let file of inputEl.files) {
+        try {
+          if(type === 'file') {
+            if(file.size > 2 * 1024 * 1024) {
+              alert(`File "${file.name}" exceeds 2MB limit and wasn't sent.`);
+              continue;
+            }
+            // For files, we save as data URLs with filename included
+            const dataUrl = await fileToDataURL(file);
+            newMessages.push({
+              id: `msg-${Date.now()}-${Math.random().toString(36).slice(2,9)}`,
+              user: currentUser.username,
+              toUser: currentChat.isGroup ? null : currentChat.id,
+              type,
+              content: dataUrl,
+              filename: file.name,
+              timestamp: Date.now()
+            });
+          } else {
+            const dataUrl = await fileToDataURL(file);
+            newMessages.push({
+              id: `msg-${Date.now()}-${Math.random().toString(36).slice(2,9)}`,
+              user: currentUser.username,
+              toUser: currentChat.isGroup ? null : currentChat.id,
+              type,
+              content: dataUrl,
+              timestamp: Date.now()
+            });
+          }
+        } catch (e) { console.warn('Skipped file: ', e.message);}
+      }
+    }
+
+    // Sending message
+    chatInputForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      const newMessages = [];
+      loginError.classList.add('hidden');
+      const text = messageInput.value.trim();
+      if(text.length > 0) {
+        newMessages.push({
+          id: `msg-${Date.now()}-${Math.random().toString(36).slice(2,9)}`,
+          user: currentUser.username,
+          toUser: currentChat.isGroup ? null : currentChat.id,
+          type: 'text',
+          content: text,
+          timestamp: Date.now()
+        });
+      }
+      await addFiles(imageUpload, 'image', newMessages);
+      await addFiles(audioUpload, 'audio', newMessages);
+      await addFiles(videoUpload, 'video', newMessages);
+      await addFiles(fileUpload, 'file', newMessages);
+
+      if(newMessages.length === 0) return;
+
+      messages.push(...newMessages);
+      saveMessages();
+      broadcastStorageEvent(LS_MESSAGES_KEY, messages);
+      renderMessages();
+      scrollToBottom();
+      messageInput.value = '';
+      clearFileInputs();
+      updateSendButton();
+      messageInput.focus();
+    });
+
+    // Broadcast synthetic storage event for same tab
+    function broadcastStorageEvent(key, newValue) {
+      const event = new StorageEvent('storage', {
+        key: key,
+        newValue: JSON.stringify(newValue)
+      });
+      window.dispatchEvent(event);
+    }
+
+    // Delete a message by id, if owned
+    function deleteMessageById(id) {
+      const idx = messages.findIndex(m => m.id === id && m.user === currentUser.username);
+      if(idx !== -1) {
+        messages.splice(idx, 1);
+        saveMessages();
+        broadcastStorageEvent(LS_MESSAGES_KEY, messages);
+        renderMessages();
+      }
+    }
+
+    // Handle storage event for multi-tab sync
+    window.addEventListener('storage', e => {
+      if(e.key === LS_MESSAGES_KEY) {
+        loadMessages();
+        renderMessages();
+        scrollToBottom();
+      } else if(e.key === LS_USERS_KEY) {
+        loadUsers();
+      } else if(e.key === LS_CURRENT_USER_KEY) {
+        loadCurrentUser();
+        if(!currentUser) {
+          showLogin();
+        }
+      } else if(e.key === LS_FRIENDS_KEY) {
+        loadFriends();
+        renderFriendsList();
+      }
+    });
+
+    // FRIENDS & PRIVATE CHAT MANAGEMENT
+
+    // Render friend list and private chats, including group
+    function renderFriendsList() {
+      friendsList.innerHTML = '';
+      if(!friends[currentUser.username]) friends[currentUser.username] = [];
+      const friendUsernames = friends[currentUser.username];
+      // Sort so active chat is clear
+      friendUsernames.forEach(friendName => {
+        const li = document.createElement('li');
+        li.setAttribute('tabindex', '0');
+        li.dataset.chatId = friendName;
+        li.title = friendName;
+        
+        li.appendChild(createAvatarElement(friendName, users.find(u=>u.username===friendName)?.avatar, 28, friendName));
+        const spanName = document.createElement('span');
+        spanName.textContent = friendName;
+        li.appendChild(spanName);
+        if(currentChat.id === friendName && !currentChat.isGroup) {
+          li.classList.add('active');
+        }
+        li.addEventListener('click', () => changeChat(friendName, false));
+        li.addEventListener('keydown', evt => {
+          if(evt.key === 'Enter' || evt.key === ' ') {
+            evt.preventDefault();
+            changeChat(friendName, false);
+          }
+        });
+        friendsList.appendChild(li);
+      });
+    }
+
+    // Add friend button enable/disable
+    addFriendInput.addEventListener('input', () => {
+      const val = addFriendInput.value.trim();
+      addFriendBtn.disabled = val.length < 2 || val === currentUser.username || (friends[currentUser.username]||[]).includes(val.toLowerCase());
+    });
+
+    // Add friend handler - case insensitive & user must exist
+    addFriendBtn.addEventListener('click', () => {
+      const nameToAddRaw = addFriendInput.value.trim();
+      if(nameToAddRaw === '' || nameToAddRaw.toLowerCase() === currentUser.username.toLowerCase()) return;
+      const nameToAdd = users.find(u => u.username.toLowerCase() === nameToAddRaw.toLowerCase());
+      if(!nameToAdd) {
+        alert('User "' + nameToAddRaw + '" does not exist.');
+        return;
+      }
+      let userFriends = friends[currentUser.username] || [];
+      if(userFriends.includes(nameToAdd.username)) {
+        alert(`You are already friends with ${nameToAdd.username}`);
+        return;
+      }
+      userFriends.push(nameToAdd.username);
+      friends[currentUser.username] = userFriends;
+      saveFriends();
+      addFriendInput.value = '';
+      addFriendBtn.disabled = true;
+      renderFriendsList();
+      alert(`You are now friends with ${nameToAdd.username}`);
+    });
+
+    // Change chat: group or private by username
+    function changeChat(chatId, isGroup = false) {
+      currentChat = {id: chatId, name: isGroup ? 'Group Chat' : chatId, isGroup};
+      [...chatList.querySelectorAll('li')].forEach(li => {
+        li.classList.toggle('active', li.dataset.chatId === chatId);
+      });
+      [...friendsList.querySelectorAll('li')].forEach(li => {
+        li.classList.toggle('active', li.dataset.chatId === chatId);
+      });
+      document.getElementById('chat-header-title').textContent = currentChat.name;
+      renderMessages();
+      scrollToBottom();
+    }
+
+    // PROFILE EDIT MODAL HANDLING
+
+    // Open modal with user data
+    function openProfileModal() {
+      profileError.classList.add('hidden');
+      profileError.textContent = '';
+      profileNameInput.value = currentUser.username;
+      profilePasswordOld.value = '';
+      profilePasswordNew.value = '';
+
+      if(currentUser.avatar) {
+        profileAvatarPreview.src = currentUser.avatar;
+        profileAvatarPreview.alt = `Avatar of ${currentUser.username}`;
+      } else {
+        profileAvatarPreview.removeAttribute('src');
+        profileAvatarPreview.textContent = generateAvatarInitials(currentUser.username);
+      }
+      profileSaveBtn.disabled = true;
+      profileModalOverlay.classList.add('active');
+      profileNameInput.focus();
+    }
+    // Close modal
+    function closeProfileModal() {
+      profileModalOverlay.classList.remove('active');
+      profileError.classList.add('hidden');
+      profileError.textContent = '';
+    }
+    profileCloseBtn.addEventListener('click', closeProfileModal);
+    profileModalOverlay.addEventListener('click', evt => {
+      if(evt.target === profileModalOverlay) closeProfileModal();
+    });
+    document.addEventListener('keydown', evt => {
+      if(evt.key === 'Escape' && profileModalOverlay.classList.contains('active')) {
+        closeProfileModal();
+      }
+    });
+
+    // Avatar preview update on change
+    profileAvatarUpload.addEventListener('change', () => {
+      if(profileAvatarUpload.files.length === 0) {
+        if(currentUser.avatar) {
+          profileAvatarPreview.src = currentUser.avatar;
+          profileAvatarPreview.textContent = '';
+        } else {
+          profileAvatarPreview.removeAttribute('src');
+          profileAvatarPreview.textContent = generateAvatarInitials(currentUser.username);
+        }
+      } else {
+        const file = profileAvatarUpload.files[0];
+        if(!file.type.startsWith('image/')) {
+          profileError.textContent = 'Only image files allowed for avatar.';
+          profileError.classList.remove('hidden');
+          profileAvatarUpload.value = '';
+          return;
+        }
+        if(file.size > 2*1024*1024) {
+          profileError.textContent = 'Avatar image must be under 2MB.';
+          profileError.classList.remove('hidden');
+          profileAvatarUpload.value = '';
+          return;
+        }
+        profileError.classList.add('hidden');
+        const reader = new FileReader();
+        reader.onload = () => {
+          profileAvatarPreview.src = reader.result;
+          profileAvatarPreview.textContent = '';
+        }
+        reader.readAsDataURL(file);
+      }
+      checkProfileChanges();
+    });
+
+    // Enable save button only if changes made & valid
+    function checkProfileChanges() {
+      const nameChanged = profileNameInput.value.trim() !== currentUser.username;
+      const passOld = profilePasswordOld.value.length > 0;
+      const passNew = profilePasswordNew.value.length > 0;
+      const avatarChanged = profileAvatarUpload.files.length > 0;
+      profileSaveBtn.disabled = !(nameChanged || (passOld && passNew) || avatarChanged);
+    }
+    profileNameInput.addEventListener('input', checkProfileChanges);
+    profilePasswordOld.addEventListener('input', checkProfileChanges);
+    profilePasswordNew.addEventListener('input', checkProfileChanges);
+
+    profileSaveBtn.addEventListener('click', () => {
+      profileError.classList.add('hidden');
+      profileError.textContent = '';
+
+      let newUsername = profileNameInput.value.trim();
+      if(newUsername.length <2 || newUsername.length >32){
+        profileError.textContent = 'Username must be 2-32 characters.';
+        profileError.classList.remove('hidden');
+        profileNameInput.focus();
+        return;
+      }
+      // Check if username taken by others
+      const usernameLower = newUsername.toLowerCase();
+      if(newUsername.toLowerCase() !== currentUser.username.toLowerCase()
+        && users.some(u => u.username.toLowerCase() === usernameLower)) {
+        profileError.textContent = 'Username already taken.';
+        profileError.classList.remove('hidden');
+        profileNameInput.focus();
+        return;
+      }
+      // Password change validation
+      const oldPass = profilePasswordOld.value;
+      const newPass = profilePasswordNew.value;
+      if(oldPass.length > 0 || newPass.length > 0) {
+        if(oldPass.length < 4) {
+          profileError.textContent = 'Enter correct current password to change password.';
+          profileError.classList.remove('hidden');
+          profilePasswordOld.focus();
+          return;
+        }
+        if(newPass.length < 4) {
+          profileError.textContent = 'New password must be at least 4 characters.';
+          profileError.classList.remove('hidden');
+          profilePasswordNew.focus();
+          return;
+        }
+        if(simpleHash(oldPass) !== currentUser.password) {
+          profileError.textContent = 'Current password incorrect.';
+          profileError.classList.remove('hidden');
+          profilePasswordOld.focus();
+          return;
+        }
+      }
+
+      // Update user data locally
+      let userIdx = users.findIndex(u => u.username.toLowerCase() === currentUser.username.toLowerCase());
+      if(userIdx === -1) userIdx = users.length;
+      let avatarDataURL = currentUser.avatar || null;
+      if(profileAvatarUpload.files.length > 0) {
+        avatarDataURL = '';
+        const file = profileAvatarUpload.files[0];
+        // Read synchronously (using FileReader + promise)
+        // But we'll do asynchronously, so save after read completes below
+      }
+     
+      // Reader promise for avatar if changed
+      const handleSave = () => {
+        // Update username and password in users array
+        users[userIdx].username = newUsername;
+        if(newPass.length >= 4) {
+          users[userIdx].password = simpleHash(newPass);
+        }
+        if(avatarDataURL) {
+          users[userIdx].avatar = avatarDataURL;
+        }
+        users[userIdx].lastLogin = Date.now();
+
+        // Update friends keys if username changed (rename)
+        if(newUsername.toLowerCase() !== currentUser.username.toLowerCase()) {
+          // Rename friends key
+          if(friends[currentUser.username]) {
+            friends[newUsername] = friends[currentUser.username];
+            delete friends[currentUser.username];
+          }
+          else friends[newUsername] = [];
+          // Rename friends lists where currentUser appears
+          Object.keys(friends).forEach(userKey => {
+            let arr = friends[userKey];
+            let i = arr.indexOf(currentUser.username);
+            if(i!==-1) {
+              arr[i] = newUsername;
+            }
+          });
+          // Rename messages user or toUser fields
+          messages.forEach(m => {
+            if(m.user === currentUser.username) m.user = newUsername;
+            if(m.toUser === currentUser.username) m.toUser = newUsername;
+          });
+          saveMessages();
+          saveFriends();
+        }
+
+        currentUser = users[userIdx];
+        saveCurrentUser();
+        saveUsers();
+
+        renderFriendsList();
+        renderMessages();
+        displayUsername.textContent = currentUser.username;
+        if(currentUser.avatar) {
+          userAvatar.style.backgroundImage = `url(${currentUser.avatar})`;
+          userAvatar.textContent = '';
+        } else {
+          userAvatar.style.backgroundImage = '';
+          userAvatar.textContent = generateAvatarInitials(currentUser.username);
+        }
+        closeProfileModal();
+        alert('Profile updated successfully.');
+      };
+
+      if(profileAvatarUpload.files.length > 0) {
+        // Read avatar image asynchronously before saving
+        const file = profileAvatarUpload.files[0];
+        const reader = new FileReader();
+        reader.onload = () => {
+          avatarDataURL = reader.result;
+          handleSave();
+        };
+        reader.onerror = () => {
+          profileError.textContent = 'Failed to read avatar image.';
+          profileError.classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+      } else {
+        handleSave();
+      }
+    });
+
+    // Profile modal open button
+    const profileOpenBtn = document.getElementById('profile-open-btn');
+    profileOpenBtn.addEventListener('click', () => {
+      openProfileModal();
+    });
+
+    // MESSAGE DELETION (already implemented in createMessageElement)
+
+    // FRIEND AND PRIVATE CHAT MANAGEMENT
+
+    // Render friend list
+    function renderFriendsList() {
+      friendsList.innerHTML = '';
+      if(!friends[currentUser.username]) friends[currentUser.username] = [];
+      const friendUsernames = friends[currentUser.username];
+      friendUsernames.forEach(friendName => {
+        const li = document.createElement('li');
+        li.setAttribute('tabindex', '0');
+        li.dataset.chatId = friendName;
+        li.title = friendName;
+
+        li.appendChild(createAvatarElement(friendName, users.find(u => u.username === friendName)?.avatar, 28, friendName));
+        const spanName = document.createElement('span');
+        spanName.textContent = friendName;
+        li.appendChild(spanName);
+
+        if(currentChat.id === friendName && !currentChat.isGroup) {
+          li.classList.add('active');
+        }
+        li.addEventListener('click', () => changeChat(friendName, false));
+        li.addEventListener('keydown', evt => {
+          if(evt.key === 'Enter' || evt.key === ' ') {
+            evt.preventDefault();
+            changeChat(friendName, false);
+          }
+        });
+        friendsList.appendChild(li);
+      });
+    }
+
+    // Change chat to group or private user
+    function changeChat(chatId, isGroup) {
+      currentChat = {id: chatId, name: isGroup ? 'Group Chat' : chatId, isGroup};
+      [...chatList.querySelectorAll('li')].forEach(li => {
+        li.classList.toggle('active', li.dataset.chatId === chatId);
+      });
+      [...friendsList.querySelectorAll('li')].forEach(li => {
+        li.classList.toggle('active', li.dataset.chatId === chatId);
+      });
+      document.getElementById('chat-header-title').textContent = currentChat.name;
+      renderMessages();
+      scrollToBottom();
+    }
+
+    // Add friend button enable / disable input watcher
+    addFriendInput.addEventListener('input', () => {
+      const val = addFriendInput.value.trim();
+      addFriendBtn.disabled = val.length < 2 || val.toLowerCase() === currentUser.username.toLowerCase() || (friends[currentUser.username]||[]).some(f => f.toLowerCase() === val.toLowerCase());
+    });
+
+    // Add friend click action with validation
+    addFriendBtn.addEventListener('click', () => {
+      let toAddRaw = addFriendInput.value.trim();
+      if(!toAddRaw) return;
+      // Find existing user case insensitive
+      let toAddUser = users.find(u => u.username.toLowerCase() === toAddRaw.toLowerCase());
+      if(!toAddUser) {
+        alert(`User "${toAddRaw}" does not exist.`);
+        return;
+      }
+      if(toAddUser.username.toLowerCase() === currentUser.username.toLowerCase()) {
+        alert("You cannot add yourself as a friend.");
+        return;
+      }
+      let userFriends = friends[currentUser.username] || [];
+      if(userFriends.some(f => f.toLowerCase() === toAddUser.username.toLowerCase())) {
+        alert(`You are already friends with ${toAddUser.username}.`);
+        return;
+      }
+      userFriends.push(toAddUser.username);
+      friends[currentUser.username] = userFriends;
+      saveFriends();
+      renderFriendsList();
+      addFriendInput.value = '';
+      addFriendBtn.disabled = true;
+      alert(`Friend added: ${toAddUser.username}`);
+    });
+
+    // Send message with file support (reuse addFiles for private/group)
+    async function addFilesToMessages(inputEl, type, newMessages) {
+      for(let file of inputEl.files) {
+        try {
+          if(type==='file') {
+            if(file.size > 2*1024*1024) {
+              alert(`File "${file.name}" exceeds 2MB limit and was not sent.`);
+              continue;
+            }
+            const dataUrl = await fileToDataURL(file);
+            newMessages.push({
+              id: `msg-${Date.now()}-${Math.random().toString(36).slice(2,9)}`,
+              user: currentUser.username,
+              toUser: currentChat.isGroup ? null : currentChat.id,
+              type,
+              content: dataUrl,
+              filename: file.name,
+              timestamp: Date.now()
+            });
+          } else {
+            const dataUrl = await fileToDataURL(file);
+            newMessages.push({
+              id: `msg-${Date.now()}-${Math.random().toString(36).slice(2,9)}`,
+              user: currentUser.username,
+              toUser: currentChat.isGroup ? null : currentChat.id,
+              type,
+              content: dataUrl,
+              timestamp: Date.now()
+            });
+          }
+        } catch(e) {
+          console.warn('Skipped file:', e.message);
+        }
+      }
+    }
+
+    // Send message form handling
+    chatInputForm.addEventListener('submit', async evt => {
+      evt.preventDefault();
+      const newMessages = [];
+      const text = messageInput.value.trim();
+      if(text.length > 0) {
+        newMessages.push({
+          id: `msg-${Date.now()}-${Math.random().toString(36).slice(2,9)}`,
+          user: currentUser.username,
+          toUser: currentChat.isGroup ? null : currentChat.id,
+          type: 'text',
+          content: text,
+          timestamp: Date.now()
+        });
+      }
+      await addFilesToMessages(imageUpload, 'image', newMessages);
+      await addFilesToMessages(audioUpload, 'audio', newMessages);
+      await addFilesToMessages(videoUpload, 'video', newMessages);
+      await addFilesToMessages(fileUpload, 'file', newMessages);
+      if(newMessages.length === 0) return;
+      messages.push(...newMessages);
+      saveMessages();
+      broadcastStorageEvent(LS_MESSAGES_KEY, messages);
+      renderMessages();
+      scrollToBottom();
+      messageInput.value = '';
+      clearFileInputs();
+      updateSendButton();
+      messageInput.focus();
+    });
+
+    // Broadcast synthetic storage event same tab
+    function broadcastStorageEvent(key, newValue) {
+      const event = new StorageEvent('storage', {
+        key: key,
+        newValue: JSON.stringify(newValue)
+      });
+      window.dispatchEvent(event);
+    }
+
+    // Delete message by id if owned
+    function deleteMessageById(id) {
+      const idx = messages.findIndex(m => m.id === id && m.user === currentUser.username);
+      if(idx !== -1) {
+        messages.splice(idx, 1);
+        saveMessages();
+        broadcastStorageEvent(LS_MESSAGES_KEY, messages);
+        renderMessages();
+      }
+    }
+
+    // Storage event handler for multi tab sync
+    window.addEventListener('storage', e => {
+      if(e.key === LS_MESSAGES_KEY) {
+        loadMessages();
+        renderMessages();
+        scrollToBottom();
+      } else if(e.key === LS_USERS_KEY) {
+        loadUsers();
+      } else if(e.key === LS_CURRENT_USER_KEY) {
+        loadCurrentUser();
+        if(!currentUser) {
+          showLogin();
+        }
+      } else if(e.key === LS_FRIENDS_KEY) {
+        loadFriends();
+        renderFriendsList();
+      }
+    });
+
+    // Enable/disable send button
+    function updateSendButton() {
+      const hasText = messageInput.value.trim() !== '';
+      const hasFiles = imageUpload.files.length > 0 || audioUpload.files.length > 0 || videoUpload.files.length > 0 || fileUpload.files.length > 0;
+      sendBtn.disabled = !(hasText || hasFiles);
+    }
+    [messageInput, imageUpload, audioUpload, videoUpload, fileUpload].forEach(el => { el.addEventListener('input', updateSendButton); el.addEventListener('change', updateSendButton); });
+    updateSendButton();
+
+    // Profile modal controls
+    function openProfileModal() {
+      profileError.classList.add('hidden');
+      profileError.textContent = '';
+      profileNameInput.value = currentUser.username;
+      profilePasswordOld.value = '';
+      profilePasswordNew.value = '';
+      if(currentUser.avatar) {
+        profileAvatarPreview.src = currentUser.avatar;
+        profileAvatarPreview.textContent = '';
+      } else {
+        profileAvatarPreview.removeAttribute('src');
+        profileAvatarPreview.textContent = generateAvatarInitials(currentUser.username);
+      }
+      profileSaveBtn.disabled = true;
+      profileModalOverlay.classList.add('active');
+      profileNameInput.focus();
+    }
+    function closeProfileModal() {
+      profileModalOverlay.classList.remove('active');
+      profileError.classList.add('hidden');
+      profileError.textContent = '';
+    }
+    profileCloseBtn.addEventListener('click', closeProfileModal);
+    profileModalOverlay.addEventListener('click', (evt) => { if(evt.target === profileModalOverlay) closeProfileModal(); });
+    document.addEventListener('keydown', evt => { if(evt.key==='Escape'&&profileModalOverlay.classList.contains('active')) closeProfileModal(); });
+    profileAvatarUpload.addEventListener('change', () => {
+      if(profileAvatarUpload.files.length === 0) {
+        if(currentUser.avatar) {
+          profileAvatarPreview.src = currentUser.avatar;
+          profileAvatarPreview.textContent = '';
+        } else {
+          profileAvatarPreview.removeAttribute('src');
+          profileAvatarPreview.textContent = generateAvatarInitials(profileNameInput.value);
+        }
+      } else {
+        const file = profileAvatarUpload.files[0];
+        if(!file.type.startsWith('image/')) {
+          profileError.textContent = 'Only image files allowed for avatar.';
+          profileError.classList.remove('hidden');
+          profileAvatarUpload.value = '';
+          return;
+        }
+        if(file.size > 2*1024*1024) {
+          profileError.textContent = 'Avatar image must be under 2MB.';
+          profileError.classList.remove('hidden');
+          profileAvatarUpload.value = '';
+          return;
+        }
+        profileError.classList.add('hidden');
+        const reader = new FileReader();
+        reader.onload = () => {
+          profileAvatarPreview.src = reader.result;
+          profileAvatarPreview.textContent = '';
+        };
+        reader.readAsDataURL(file);
+      }
+      checkProfileChanges();
+    });
+    function checkProfileChanges() {
+      const nameChanged = profileNameInput.value.trim() !== currentUser.username;
+      const passOld = profilePasswordOld.value.length > 0;
+      const passNew = profilePasswordNew.value.length > 0;
+      const avatarChanged = profileAvatarUpload.files.length > 0;
+      profileSaveBtn.disabled = !(nameChanged || (passOld && passNew) || avatarChanged);
+    }
+    profileNameInput.addEventListener('input', checkProfileChanges);
+    profilePasswordOld.addEventListener('input', checkProfileChanges);
+    profilePasswordNew.addEventListener('input', checkProfileChanges);
+    profileSaveBtn.addEventListener('click', () => {
+      profileError.classList.add('hidden');
+      profileError.textContent = '';
+
+      let newName = profileNameInput.value.trim();
+      if(newName.length < 2 || newName.length > 32) {
+        profileError.textContent = 'Username must be 2-32 characters.';
+        profileError.classList.remove('hidden');
+        profileNameInput.focus();
+        return;
+      }
+      const lowerNew = newName.toLowerCase();
+      if(newName.toLowerCase() !== currentUser.username.toLowerCase() && users.some(u => u.username.toLowerCase() === lowerNew)) {
+        profileError.textContent = 'Username already taken.';
+        profileError.classList.remove('hidden');
+        profileNameInput.focus();
+        return;
+      }
+      const oldPass = profilePasswordOld.value;
+      const newPass = profilePasswordNew.value;
+      if(oldPass.length > 0 || newPass.length > 0) {
+        if(oldPass.length < 4) {
+          profileError.textContent = 'Enter current password to change password.';
+          profileError.classList.remove('hidden');
+          profilePasswordOld.focus();
+          return;
+        }
+        if(newPass.length < 4) {
+          profileError.textContent = 'New password must be at least 4 characters.';
+          profileError.classList.remove('hidden');
+          profilePasswordNew.focus();
+          return;
+        }
+        if(simpleHash(oldPass) !== currentUser.password) {
+          profileError.textContent = 'Current password incorrect.';
+          profileError.classList.remove('hidden');
+          profilePasswordOld.focus();
+          return;
+        }
+      }
+
+      let userIndex = users.findIndex(u => u.username.toLowerCase() === currentUser.username.toLowerCase());
+      let avatarDataUrl = currentUser.avatar || null;
+
+      const finalizeSave = () => {
+        users[userIndex].username = newName;
+        if(newPass.length >= 4) users[userIndex].password = simpleHash(newPass);
+        if(avatarDataUrl) users[userIndex].avatar = avatarDataUrl;
+        users[userIndex].lastLogin = Date.now();
+
+        if(newName.toLowerCase() !== currentUser.username.toLowerCase()) {
+          if(friends[currentUser.username]) {
+            friends[newName] = friends[currentUser.username];
+            delete friends[currentUser.username];
+          } else {
+            friends[newName] = [];
+          }
+          Object.keys(friends).forEach(k => {
+            let arr = friends[k];
+            let pos = arr.indexOf(currentUser.username);
+            if(pos !== -1) arr[pos] = newName;
+          });
+          messages.forEach(m => {
+            if(m.user === currentUser.username) m.user = newName;
+            if(m.toUser === currentUser.username) m.toUser = newName;
+          });
+          saveMessages();
+          saveFriends();
+        }
+
+        currentUser = users[userIndex];
+        saveCurrentUser();
+        saveUsers();
+        renderFriendsList();
+        renderMessages();
+        displayUsername.textContent = currentUser.username;
+        if(currentUser.avatar) {
+          userAvatar.style.backgroundImage = `url(${currentUser.avatar})`;
+          userAvatar.textContent = '';
+        } else {
+          userAvatar.style.backgroundImage = '';
+          userAvatar.textContent = generateAvatarInitials(currentUser.username);
+        }
+        closeProfileModal();
+        alert('Profile updated successfully.');
+      };
+
+      if(profileAvatarUpload.files.length > 0) {
+        const file = profileAvatarUpload.files[0];
+        const reader = new FileReader();
+        reader.onload = () => {
+          avatarDataUrl = reader.result;
+          finalizeSave();
+        };
+        reader.onerror = () => {
+          profileError.textContent = 'Failed to read avatar image.';
+          profileError.classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+      } else {
+        finalizeSave();
+      }
+    });
+
+    // Open profile modal button
+    const profileOpenBtn = document.getElementById('profile-open-btn');
+    profileOpenBtn.addEventListener('click', openProfileModal);
+
+    // Change chat with chat list click
+    chatList.querySelectorAll('li').forEach(li => {
+      li.addEventListener('click', () => {
+        changeChat(li.dataset.chatId, li.dataset.chatId === 'group');
+      });
+      li.addEventListener('keydown', e => {
+        if(e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          changeChat(e.target.dataset.chatId, e.target.dataset.chatId === 'group');
+        }
+      });
+    });
+
+    // Change chat function
+    function changeChat(chatId, isGroup) {
+      currentChat = {id: chatId, name: isGroup ? 'Group Chat' : chatId, isGroup};
+      [...chatList.querySelectorAll('li')].forEach(li => {
+        li.classList.toggle('active', li.dataset.chatId === chatId);
+      });
+      [...friendsList.querySelectorAll('li')].forEach(li => {
+        li.classList.toggle('active', li.dataset.chatId === chatId);
+      });
+      document.getElementById('chat-header-title').textContent = currentChat.name;
+      renderMessages();
+      scrollToBottom();
+    }
+
+    // Input and filechange event to enable send button
+    [messageInput, imageUpload, audioUpload, videoUpload, fileUpload].forEach(el => {
+      el.addEventListener('input', updateSendButton);
+      el.addEventListener('change', updateSendButton);
+    });
+
+    // Initialization on page load
+    window.addEventListener('load', () => {
+      initApp();
+    });
+  })();
+</script>
+</body>
+</html>
+
